@@ -12,14 +12,16 @@
 #include <vector>
 using namespace std;
 
-class TalkyBundleMessage
-{    
-    public:
-        TalkyMessage    pack();
-        void    unpack(TalkyMessage &bundleMsg, unsigned short newType= -1);
-        
-        void    push(TalkyMessage &msg);
-    
-        vector<TalkyMessage>    bundle;
-    
-};
+namespace Talky {
+	class TalkyBundleMessage
+	{    
+		public:
+			TalkyMessage    pack();
+			void    unpack(TalkyMessage &bundleMsg, unsigned short newType= -1);
+			
+			void    push(TalkyMessage &msg);
+		
+			vector<TalkyMessage>    bundle;
+		
+	};
+}
