@@ -14,18 +14,49 @@
 
 using namespace std;
 
+#include "TalkyBuffer.h"
 
 #define CLOCKS_PER_MILLISEC (CLOCKS_PER_SEC / 1000)
-#define TALKY_ENDCHAR '\n'
+#define TALKY_START_TOKEN (unsigned char)0
+#define TALKY_END_TOKEN '\n'
 
 namespace Talky {
-	class TalkyMessage
-	{
+	
+	class TalkyMessageHeader {
+	public:
+		TalkyMessageHeader();
+		TalkyMessageHeader(const char * Company, const char * Protocol, unsigned short Version, unsigned short ContentsType);
+		
+		unsigned short	getContentsType() const;
+		unsigned long	getTimestamp() const;
+		
+		void	setCompany(const char * s);
+		void	setProtocol(const char * s);
+		void	setVersion(unsigned short v);
+		void	setContentsType(unsigned short t);
+		void	setTimestamp();
+		
+		string	toString();
+		
+	protected:
+		char			company[2];
+		
+		char			protocol[2];
+		unsigned short	version;
+		unsigned long	timestamp;
+		
+		unsigned short	contentsType;
+	};
+	
+	class TalkyMessage {
 	public:
 		TalkyMessage();
 		
 		bool	serialise(char* &message, int &remainingAvailableBytes);
+		bool	serialise(TalkyBuffer &buf);
+		
 		bool	deSerialise(char* &message, int &remainingBytesReceived);
+		bool	deSerialise(TalkyBuffer &buf);
 		
 		template <class T>
 		TalkyMessage& operator<<(T &object)
@@ -37,43 +68,28 @@ namespace Talky {
 		bool operator>>(T &object)
 		{
 			if (getPayloadLength() == sizeof(object))
-			{
-				object = *(T*)getPayload();
-				return true;
-			} else
+				return (payload >> object);
+			else
 				return false;
 		}
 		
-		char	*getPayload(int &length) const;
-		char	*getPayload() const;
+		const TalkyBuffer&			getPayload() const;
+		const TalkyMessageHeader&	getHeader() const;
 		
 		void	setPayload(void* const message, unsigned short length);
+		void	setHeader(TalkyMessageHeader const &h);
+		
 		int		getTotalLength();
 		unsigned short getPayloadLength();
 		void	initPayload(unsigned short length);
 		
 		string	toString();
-		void	setCompany(const char * s);
-		void	setProtocol(const char * s);
-		void	setTimestamp();
 		
 		//for sorting by timestamp
 		bool operator<(const TalkyMessage& other) const;
-		
-		//contents
-		char			Company[2];
-		
-		char			Protocol[2];
-		unsigned short	Version;
-		unsigned long	Timestamp;
-		
-		unsigned short	ContentsType;
-		
+
 	protected:	
-		unsigned short	PayloadLength;
-		char			*Payload;
-		
-		bool			hasPayload;
-		
+		TalkyMessageHeader	header;
+		TalkyBuffer			payload;		
 	};
 }

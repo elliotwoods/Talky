@@ -10,105 +10,135 @@
 #include "TalkyMessage.h"
 
 namespace Talky {
-	TalkyMessage::TalkyMessage() :
-	hasPayload(false),
-	PayloadLength(0),
-	Version(0),
-	Timestamp(clock() / CLOCKS_PER_MILLISEC),
-	ContentsType(0)
+	
+	//------------------------------------------------------
+	// TalkyMessageHeader
+	//------------------------------------------------------
+	//
+	TalkyMessageHeader::TalkyMessageHeader() :
+	version(0),
+	contentsType(0) {
+		setTimestamp();
+	}
+	
+	TalkyMessageHeader::TalkyMessageHeader(const char * Company, const char * Protocol, unsigned short Version, unsigned short ContentsType)
 	{
+		setCompany(Company);
+		setProtocol(Protocol);
+		setVersion(Version);
+		setContentsType(ContentsType);
+	}
+	
+	unsigned short TalkyMessageHeader::getContentsType() const {
+		return contentsType;
+	}
+	
+	unsigned long TalkyMessageHeader::getTimestamp() const {
+		return timestamp;
+	}
+	
+	void TalkyMessageHeader::setCompany(const char * s)	{
+		memcpy(company, s, 2);
+	}
+	
+	void TalkyMessageHeader::setProtocol(const char * s) {
+		memcpy(protocol, s, 2);
+	}
+	
+	void TalkyMessageHeader::setVersion(unsigned short v) {
+		version = v;
+	}
+	
+	void TalkyMessageHeader::setContentsType(unsigned short t) {
+		contentsType = t;
+	}
+	
+	void TalkyMessageHeader::setTimestamp()	{
+		timestamp = clock() / CLOCKS_PER_MILLISEC;
+	}
+	
+	string TalkyMessageHeader::toString() {
+
+		stringstream out;
+		
+		out << "Company:\t" << string(company, 2) << "\n";
+		out << "Protocol:\t" << string(protocol, 2) << "\n";
+		out << "Version:\t" << version << "\n";
+		out << "Timestamp:\t" << timestamp << "\n";
+		out << "ContentsType:\t" << contentsType << "\n";
+		
+		return out.str();
+
+	}
+	//
+	//------------------------------------------------------
+	
+	
+	
+	//------------------------------------------------------
+	// TalkyMessage
+	//------------------------------------------------------
+	//
+	TalkyMessage::TalkyMessage() {
 	}
 
-	bool TalkyMessage::serialise(char* &message, int &remainingAvailableBytes)
-	{
+	bool TalkyMessage::serialise(TalkyBuffer &buf) {
 		
-		int len = getTotalLength();
-		if (len > remainingAvailableBytes)
+		if (!buf.hasSpaceToWrite(getTotalLength()))
 			return false;
 		
-		* (unsigned char *) message = 0;
+		buf << TALKY_START_TOKEN;
+		buf << header;
+		buf << payload;
+		buf << TALKY_END_TOKEN;		
 		
-		memcpy(message+1, Company, 2);
-		memcpy(message+3, Protocol, 2);
+		return true;		
+	}
+	
+	bool TalkyMessage::deSerialise(TalkyBuffer &buf) {
 		
-		* (unsigned short *) (message + 5)  = Version;
-		* (unsigned long *)  (message + 7)  = Timestamp;
-		* (unsigned short *) (message + 11) = ContentsType;
-		* (unsigned short *) (message + 13) = PayloadLength;
+		unsigned char token;
 		
-		memcpy(message+15, Payload, PayloadLength);
+		//token + payload header + message header
+		if (!buf.hasSpaceToRead(sizeof(TalkyMessageHeader) + 1 + sizeof(BufferOffset)))
+			return false;
 		
-		message[len-1] = TALKY_ENDCHAR;
+		buf >> token;
+		if (token != TALKY_START_TOKEN)
+			 throw("Message corrupt!");
 		
-		message += len;
-		remainingAvailableBytes -= len;
+		buf >> header;
+		buf >> payload;
 		
-		return true;	
+		buf >> token;
+		if (token != TALKY_END_TOKEN)
+			throw("Message corrupt!");
+	}
+	
+	const TalkyBuffer& TalkyMessage::getPayload() const {
+		return payload;
+	}
+	
+	const TalkyMessageHeader& TalkyMessage::getHeader() const {
+		return header;
 	}
 
-	bool TalkyMessage::deSerialise(char* &message, int &remainingBytesReceived)
-	{
-		if (* (unsigned char *) message != 0)
-			throw("TalkyMessage::deSerialise : We're trying to deserialise a non-simple message to a simple talkymessage");
-
-		memcpy(Company, message+1, 2);
-		memcpy(Protocol, message+3, 2);
-		
-		unsigned short tempLength;
-		Version         = * (unsigned short *) (message + 5);
-		Timestamp       = * (unsigned long *)  (message + 7);
-		ContentsType    = * (unsigned short *) (message + 11);
-		tempLength      = * (unsigned short *) (message + 13);
-		
-		initPayload(tempLength);
-		
-		if (getTotalLength() > remainingBytesReceived)
-			throw("TalkyMessage::deSerialise : We've run out of message to deserialise");
-		
-		memcpy(Payload, message+15, PayloadLength);
-		
-		if (message[getTotalLength()-1] != TALKY_ENDCHAR)
-			throw("TalkyMessage::deSerialise : End charachter of message is wrong when deserialising");
-		
-		message += getTotalLength();
-		remainingBytesReceived -= getTotalLength();
-		
-		return true;
+	void TalkyMessage::setHeader(Talky::TalkyMessageHeader const &h) {
+		header = h;
 	}
-
-	char *TalkyMessage::getPayload(int &length) const
-	{
-		length = PayloadLength;
-		return getPayload();
-	}
-
-	char *TalkyMessage::getPayload() const
-	{
-		return Payload;
-	}
-
-	void TalkyMessage::setPayload(void* const message, unsigned short length)
-	{
-		initPayload(length);
-		memcpy(Payload, message, length);
-	}
-
+	
 	int TalkyMessage::getTotalLength()
 	{
-		return      1 // message type
-				+   2 // company
-				+   2 // protocol
-				+   2 // version
-				+   4 // timestamp
-				+   2 // contents type
-				+   2 // Payload length
-				+   PayloadLength //Payload
-				+   1; //endchar
+		return	sizeof(unsigned char) +
+				sizeof(TalkyMessageHeader) +
+				sizeof(BufferOffset) +
+				payload.size() +
+				sizeof(unsigned char);
 	}
 
 	unsigned short TalkyMessage::getPayloadLength()
 	{
-		return PayloadLength;
+		return payload.size();
 	}
 
 	string TalkyMessage::toString()
@@ -116,60 +146,26 @@ namespace Talky {
 		
 		stringstream out;
 
-		out << "Company:\t" << string(Company, 2) << "\n";
-		out << "Protocol:\t" << string(Protocol, 2) << "\n";
-		out << "Version:\t" << Version << "\n";
-		out << "Timestamp:\t" << Timestamp << "\n";
-		out << "ContentsType:\t" << ContentsType << "\n";
-		out << "PayloadLength:\t" << PayloadLength << "\n";
+		out << header.toString();
 		
 		out << "Payload:\n";
 		
-		for (int i=0; i<PayloadLength; i++)
-		{
-			if (Payload[i] > 32)
-				out << Payload[i];
-			else
-				out << ".";
-		}
+		out << payload.toString();
 		
 		out << "\n\n";
 		
 		return out.str();
 	}
 
-	void TalkyMessage::setCompany(const char * s)
-	{
-		memcpy(Company, s, 2);
-	}
-
-	void TalkyMessage::setProtocol(const char * s)
-	{
-		memcpy(Protocol, s, 2);
-	}
-
-	void TalkyMessage::setTimestamp()
-	{
-		Timestamp = clock() / CLOCKS_PER_MILLISEC;
-	}
-
 	bool TalkyMessage::operator<(const TalkyMessage& other) const
 	{
-		return Timestamp < other.Timestamp;
+		return header.getTimestamp() < other.getHeader().getTimestamp();
 	}
 
 	void TalkyMessage::initPayload(unsigned short length)
 	{
-		if (hasPayload && PayloadLength != length)
-		{
-			delete[] Payload;
-			hasPayload = false;
-		}
-		
-		if (!hasPayload)
-		{
-			Payload = new char[length];
-			PayloadLength = length;
-		}
+		payload.allocate(length);
 	}
+	//
+	//------------------------------------------------------
 }
