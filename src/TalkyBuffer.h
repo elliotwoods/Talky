@@ -18,7 +18,7 @@ namespace Talky {
 	 We use it for defining indexes within the 
 	 TalkyBuffer.
 	*/
-	typedef unsigned short BufferOffset;
+	typedef unsigned long BufferOffset;
 	
 	class TalkyBuffer {
 	public:
@@ -29,6 +29,7 @@ namespace Talky {
 		
 		void	allocate(BufferOffset size);
 		void	deAllocate();
+		void	clean();
 		
 		BufferOffset size() const;
 		const void * getData() const;
@@ -36,8 +37,12 @@ namespace Talky {
 		
 		bool		hasSpaceToWrite(BufferOffset size) const;
 		bool		hasSpaceToRead(BufferOffset size) const;
+		BufferOffset	getRemainingWriteSpace() const;
+		BufferOffset	getRemainingReadSpace() const;
 		
+		///Used when putting a payload onto main buffers
 		TalkyBuffer& operator<<(TalkyBuffer const &other);
+		///Used when pulling a payload off main buffers
 		bool operator>>(TalkyBuffer &other) const;
 		
 		template<class T>
@@ -64,14 +69,51 @@ namespace Talky {
 		
 		string toString(unsigned short maxLength=10) const;
 		
+		
+		
+		/**
+		 Hard ass access. You sure you really want to do this??
+		 We need this in TalkyBase, consider moving to 'friend' class?
+		 */
+		char*	getWritePointer();
+		/**
+		 Hard ass access. You sure you really want to do this??
+		 We need this in TalkyBase, consider moving to 'friend' class?
+		 */
+		void	advanceWritePointer(BufferOffset);
+		
+		/**
+		 Hard ass access. You sure you really want to do this??
+		 We need this in TalkyBase, consider moving to 'friend' class?
+		 */
+		char*	getReadPointer();
+		/**
+		 Hard ass access. You sure you really want to do this??
+		 We need this in TalkyBase, consider moving to 'friend' class?
+		 */
+		void	advanceReadPointer(BufferOffset);
+		
 	protected:
 		void	init();
 		
 		bool	write(const void* data, BufferOffset size);
 		bool	read(void* data, BufferOffset size);
 		
+		///Used to perform dynamic reallocation. Returns false if we're dynamic allocation is turned off.
+		bool	reAllocate(BufferOffset s);
+		
 		char*			data;
+		
+		///Does this buffer have space allocated?
 		bool			isAllocated;
+		
+		///Does this buffer allow for space to be dynamically allocated for storage? If false, then we presume static allocation
+		bool			isDynamicallyAllocated;
+		
+		///If this flag is true, we always reAllocate by a factor of 2, so that multiple reallocations are not necessary. We may wish to turn this flag off if we encounter large files.
+		bool			quickReallocation;
+		
+		
 		BufferOffset	allocatedSize;
 		BufferOffset	writtenSize;
 		

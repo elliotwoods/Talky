@@ -30,7 +30,11 @@ namespace Talky {
 	void TalkyBuffer::init() {
 		readOffset = 0;
 		writeOffset = 0;
+		
+		isDynamicallyAllocated = true;
 		isAllocated = false;
+		quickReallocation = true;
+		
 		allocatedSize = 0;
 		writtenSize = 0;
 	}
@@ -40,6 +44,7 @@ namespace Talky {
 		
 		data = new char[size];
 		isAllocated = true;
+		isDynamicallyAllocated = false;
 		allocatedSize = size;
 	}
 	
@@ -51,6 +56,42 @@ namespace Talky {
 		isAllocated = false;
 	}
 	
+	bool TalkyBuffer::reAllocate(BufferOffset s) {
+		
+		if (!isDynamicallyAllocated)
+			return false;
+		
+		if (s == 0)
+		{
+			deAllocate();
+			return false;
+		}
+		
+		if (quickReallocation)
+			s = BufferOffset(1) << BufferOffset(ceil(log(float(s))/log(2.0f)));
+			// e.g. = 1 << ceil(log2(5));
+			// 8 = 1 << 3
+		
+		char* newDataArea = new char[s];
+		
+		if (isAllocated)
+		{
+			memcpy(newDataArea, data, writtenSize);
+			delete[] data;			
+		}
+		
+		data = newDataArea;
+		isAllocated = true;
+		allocatedSize = s;
+		
+		return true;
+	}
+
+	void TalkyBuffer::clean() {
+		readOffset = 0;
+		writeOffset = 0;
+		writtenSize = 0;
+	}
 	//------
 	
 	BufferOffset TalkyBuffer::size() const {
@@ -67,27 +108,41 @@ namespace Talky {
 	}
 	
 	bool TalkyBuffer::hasSpaceToWrite(BufferOffset size) const {
-		if (size > allocatedSize - writeOffset)
+		if (size > getRemainingWriteSpace())
 			return false;
 		else
 			return true;
 	}
 	
 	bool TalkyBuffer::hasSpaceToRead(BufferOffset size) const {
-		if (size > writtenSize - readOffset)
+		if (size > getRemainingReadSpace())
 			return false;
 		else
 			return true;
 	}
 	
+	BufferOffset TalkyBuffer::getRemainingWriteSpace() const {
+		if (writeOffset >= allocatedSize)
+			return 0;
+		else
+			return (allocatedSize - writeOffset);
+	}
+	
+	BufferOffset TalkyBuffer::getRemainingReadSpace() const {
+		if (readOffset >= allocatedSize)
+			return 0;
+		else
+			return (allocatedSize - readOffset);
+	}
+	
 	bool TalkyBuffer::write(const void *data, BufferOffset size) {
 		if (!hasSpaceToWrite(size))
-			return false;
+			if (!reAllocate(writeOffset + size))
+				return false;
 		
 		memcpy((char*)data + writeOffset, data, size);
-		writeOffset += size;
-		if (writeOffset > writtenSize)
-			writtenSize = writeOffset;
+		
+		advanceWritePointer(size);
 		
 		return true;
 	}
@@ -97,7 +152,8 @@ namespace Talky {
 			return false;
 		
 		memcpy(data, (char*)data + readOffset, size);
-		readOffset += size;
+		
+		advanceReadPointer(size);
 		
 		return true;
 	}
@@ -152,6 +208,33 @@ namespace Talky {
 		}
 		
 		return out.str();
+	}
+	
+	
+	//------
+	
+	char* TalkyBuffer::getWritePointer() {
+		return data + writeOffset;
+	}
+	
+	void TalkyBuffer::advanceWritePointer(BufferOffset s) {
+		writeOffset += s;
+		if (writeOffset > writtenSize)
+			writtenSize = writeOffset;
+		
+		if (s > allocatedSize)
+			throw ("TalkyBuffer::advanceWritePointer : Buffer overrun error");
+	}
+	
+	char* TalkyBuffer::getReadPointer() {
+		return data + readOffset;
+	}
+	
+	void TalkyBuffer::advanceReadPointer(BufferOffset s) {
+		readOffset += s;
+		
+		if (s > allocatedSize)
+			throw ("TalkyBuffer::advanceReadPointer : Buffer overrun error");
 	}
 	
 }

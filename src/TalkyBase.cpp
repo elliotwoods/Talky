@@ -19,7 +19,9 @@ namespace Talky {
 	nodeType(0),
 	lastConnectAttempt(0),
 	isConnected(false),
-	isServerBound(false)
+	isServerBound(false),
+	_bufferIn(TALKY_BUFFER_IN_SIZE),
+	_bufferOut(TALKY_BUFFER_OUT_SIZE)
 	{
 		
 	}
@@ -234,18 +236,16 @@ namespace Talky {
 		/////////////////////////////////////
 		// RECEIVE DATA
 		/////////////////////////////////////
+		//		
 		//
-		int availableBytes;
-		
 		if (nodeType == 1)
 		{	
 			if (isClientConnected())
 			{			
 				//client
-				availableBytes = rxClient(bufferIn, TALKY_BUFFER_IN_SIZE);
-				
-				if (availableBytes > 0)
-					processIncomingBytes(availableBytes);
+				_bufferIn.clean();
+				rxClient();
+				processIncomingBuffer();
 			}
 			
 		} else {
@@ -260,10 +260,9 @@ namespace Talky {
 						if (!isServersClientConnected(iRemote))
 							continue; 
 						
-						availableBytes = rxServer(iRemote, bufferIn, TALKY_BUFFER_IN_SIZE);					
-						
-						if (availableBytes > 0)
-							processIncomingBytes(availableBytes);
+						_bufferIn.clean();
+						rxServer(iRemote);				
+						processIncomingBuffer();
 						
 					}
 					unlockServer();
@@ -283,40 +282,23 @@ namespace Talky {
 		//
 		if (isConnected)
 		{
-			int availableBytes = TALKY_BUFFER_OUT_SIZE;
-			char * bufferPointer = bufferOut;
-			bool hasMessage = false;
+			bool hasDataToSend = false;
 			
-			vector<TalkyMessage>::iterator it;
-			
-			while (sendQueue.size() > 0)
-			{
-				//point to the one we want to deal with
-				it = sendQueue.begin();
-				
-				//let's try to serialise
-				if (!it->serialise(bufferPointer, availableBytes))
-					break;
-				
-				//if we were able to put this message into the buffer
-				//i.e. there was sufficient space in the buffer, no exceptions
-				//then remove it from send message queue
-				sendQueue.erase(it);
-				
-				hasMessage = true;
+			try {
+				while (sendQueue.size() > 0)
+				{
+					_bufferOut << sendQueue.front();
+					sendQueue.erase(sendQueue.begin());
+					hasDataToSend = true;
+				}
+			} catch (char* e) {
+				//buffer overrun
+				throwWarning("Buffer overrun, waiting until next frame to send remaining messages");
 			}
 			
-			if (hasMessage)
-				if (nodeType == 1)
-					
-					//client
-					txClient(bufferOut, TALKY_BUFFER_OUT_SIZE - availableBytes);
+			if (hasDataToSend)
+				tx();
 			
-				else
-					
-					//server
-					for (int iClient=0; iClient < getNumServerClients(); iClient++)
-						txServer(iClient, bufferOut, TALKY_BUFFER_OUT_SIZE - availableBytes);
 			
 		}
 		//
@@ -325,23 +307,66 @@ namespace Talky {
 		
 	}
 
-	void TalkyBase::processIncomingBytes(int nBytes)
-	{
+	bool TalkyBase::rxServer(int iClient) {
+		const int nBytesReceived = rxServer(iClient, _bufferIn.getWritePointer(), _bufferIn.getRemainingWriteSpace());
+		
+		_bufferIn.advanceWritePointer(nBytesReceived);
+	}
+	
+	bool TalkyBase::rxClient() {
+		const int nBytesReceived = rxClient(_bufferIn.getWritePointer(), _bufferIn.getRemainingWriteSpace());
+		
+		_bufferIn.advanceWritePointer(nBytesReceived);		
+	}
+	
+	void TalkyBase::tx() {
+		if (nodeType == 0) {
+			throwWarning("TalkyBase::tx : can't send, we're not initialsed as either a client or server");
+			return;
+		}
+		if (nodeType == 1) {
+			//client
+			txClient();
+			
+		} else if (nodeType == 2) {
+			//server
+			for (int iClient=0; iClient < getNumServerClients(); iClient++)
+				txServer(iClient, false);
+			
+			//only clean the buffer once
+			_bufferOut.clean();
+		}
+	}
+	
+	void TalkyBase::txServer(int iClient, bool clean) {
+		int nBytesSending = _bufferOut.getRemainingReadSpace();
+		txServer(iClient, _bufferOut.getReadPointer(), nBytesSending);
+		
+		if (clean)
+			_bufferOut.clean();
+	}
+	
+	void TalkyBase::txClient(bool clean) {
+		int nBytesSending = _bufferOut.getRemainingReadSpace();
+		txClient(_bufferOut.getReadPointer(), nBytesSending);
+		
+		if (clean)
+			_bufferOut.clean();
+	}
+	
+	void TalkyBase::processIncomingBuffer() {		
 		lockThread();
 		
-		char * messagePointer = bufferIn;
+		//perhaps recode this so we dont copy?
+		TalkyMessage msg;
+		while (_bufferIn >> msg)
+			receiveQueue.push_back(msg);
 		
-		//perhaps recode this so we dont copy
-		TalkyMessage currentMessage;
-		
-		while (nBytes > 0 && currentMessage.deSerialise(messagePointer, nBytes))
-			receiveQueue.push_back(currentMessage);
-		
+		//sort by timestamp
 		sort(receiveQueue.begin(), receiveQueue.end());
 		
 		//trigger message available event.
-		//processing will be performed in this
-		//thread
+		//processing will be performed in this thread
 		int msgCount = receiveQueue.size();
 		notifyReceiveEvent(msgCount);
 		

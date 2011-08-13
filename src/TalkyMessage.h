@@ -48,20 +48,18 @@ namespace Talky {
 		unsigned short	contentsType;
 	};
 	
+	//------
+	
 	class TalkyMessage {
 	public:
+		friend class TalkyBuffer;
+		
 		TalkyMessage();
-		
-		bool	serialise(char* &message, int &remainingAvailableBytes);
-		bool	serialise(TalkyBuffer &buf);
-		
-		bool	deSerialise(char* &message, int &remainingBytesReceived);
-		bool	deSerialise(TalkyBuffer &buf);
 		
 		template <class T>
 		TalkyMessage& operator<<(T &object)
 		{
-			setPayload(&object, sizeof(T));
+			payload << object;
 		}
 		
 		template <class T>
@@ -76,20 +74,40 @@ namespace Talky {
 		const TalkyBuffer&			getPayload() const;
 		const TalkyMessageHeader&	getHeader() const;
 		
-		void	setPayload(void* const message, unsigned short length);
-		void	setHeader(TalkyMessageHeader const &h);
+		void					setHeader(TalkyMessageHeader const &h);
 		
-		int		getTotalLength();
-		unsigned short getPayloadLength();
-		void	initPayload(unsigned short length);
+		int						getTotalLength() const;
+		unsigned short			getPayloadLength() const;
+		void					initPayload(unsigned short length);
+		string					toString();
 		
-		string	toString();
-		
-		//for sorting by timestamp
+		///for sorting by timestamp
 		bool operator<(const TalkyMessage& other) const;
+		
+		/** Serialise this onto main buffer.
+		 Consider instead using 
+		 buf << msg;
+		 syntax. Serialise may be depreciated / made private
+		 */		
+		bool	serialise(TalkyBuffer &buf) const;
+		
+		/** Deserialise this off of main buffer.
+		 Consider instead using 
+		 buf >> msg;
+		 syntax. Deserialise may be depreciated / made private
+		 */		
+		bool	deSerialise(TalkyBuffer &buf);
 
-	protected:	
+	protected:
 		TalkyMessageHeader	header;
 		TalkyBuffer			payload;		
 	};
+	
+	//-----
+	
+	///Used when putting a message onto main buffer
+	TalkyBuffer& operator<<(TalkyBuffer& b, TalkyMessage const &m);
+	///Used when pulling a message off main buffer
+	bool operator>>(TalkyBuffer& b, TalkyMessage &m);
+
 }

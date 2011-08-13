@@ -74,7 +74,6 @@ namespace Talky {
 	//------------------------------------------------------
 	
 	
-	
 	//------------------------------------------------------
 	// TalkyMessage
 	//------------------------------------------------------
@@ -82,7 +81,7 @@ namespace Talky {
 	TalkyMessage::TalkyMessage() {
 	}
 
-	bool TalkyMessage::serialise(TalkyBuffer &buf) {
+	bool TalkyMessage::serialise(TalkyBuffer &buf) const {
 		
 		if (!buf.hasSpaceToWrite(getTotalLength()))
 			return false;
@@ -127,8 +126,7 @@ namespace Talky {
 		header = h;
 	}
 	
-	int TalkyMessage::getTotalLength()
-	{
+	int TalkyMessage::getTotalLength() const {
 		return	sizeof(unsigned char) +
 				sizeof(TalkyMessageHeader) +
 				sizeof(BufferOffset) +
@@ -136,8 +134,7 @@ namespace Talky {
 				sizeof(unsigned char);
 	}
 
-	unsigned short TalkyMessage::getPayloadLength()
-	{
+	unsigned short TalkyMessage::getPayloadLength() const {
 		return payload.size();
 	}
 
@@ -168,4 +165,20 @@ namespace Talky {
 	}
 	//
 	//------------------------------------------------------
+	
+	//------------------------
+	// buffer stream operators
+	//
+	TalkyBuffer& operator<<(TalkyBuffer &b, TalkyMessage const &m) {
+		if (m.serialise(b))
+			return b;
+		else
+			throw("Buffer overrun - insufficient space to write");
+	}
+	
+	bool operator>>(TalkyBuffer &b, TalkyMessage &m) {
+		return m.deSerialise(b);
+	}
+	//
+	//------------------------
 }
