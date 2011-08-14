@@ -21,8 +21,29 @@ namespace Talky {
 		allocate(size);
 	}
 	
+	TalkyBuffer::TalkyBuffer(const TalkyBuffer& other) {
+		operator=(other);
+	}
+	
 	TalkyBuffer::~TalkyBuffer() {
 		deAllocate();
+	}
+	
+	//------
+	
+	TalkyBuffer& TalkyBuffer::operator= (const TalkyBuffer & other) {
+	
+		isAllocated = other.getIsAllocated();
+		isDynamicallyAllocated = other.getIsDynamicallyAllocated();
+		quickReallocation = other.getIsQuickReallocation();
+		allocatedSize = other.getAllocatedSize();
+		writtenSize = other.getWrittenSize();
+		readOffset = other.getReadOffset();
+		writeOffset = other.getWriteOffset();
+		
+		
+		_data = new char[allocatedSize];
+		memcpy(_data, other.getData(), allocatedSize);
 	}
 	
 	//------
@@ -42,7 +63,7 @@ namespace Talky {
 	void TalkyBuffer::allocate(BufferOffset size) {
 		deAllocate();
 		
-		data = new char[size];
+		_data = new char[size];
 		isAllocated = true;
 		isDynamicallyAllocated = false;
 		allocatedSize = size;
@@ -52,7 +73,7 @@ namespace Talky {
 		if (!isAllocated)
 			return;
 		
-		delete[] data;
+		delete[] _data;
 		isAllocated = false;
 	}
 	
@@ -76,11 +97,11 @@ namespace Talky {
 		
 		if (isAllocated)
 		{
-			memcpy(newDataArea, data, writtenSize);
-			delete[] data;			
+			memcpy(newDataArea, _data, writtenSize);
+			delete[] _data;			
 		}
 		
-		data = newDataArea;
+		_data = newDataArea;
 		isAllocated = true;
 		allocatedSize = s;
 		
@@ -99,12 +120,13 @@ namespace Talky {
 	}
 	
 	const void * TalkyBuffer::getData() const {
-		return data;
+		return _data;
 	}
 	
 	void TalkyBuffer::setData(const void * d, BufferOffset size) {
 		allocate(size);
-		memcpy(data, d, size);
+		memcpy(_data, d, size);
+		writtenSize = size;
 	}
 	
 	bool TalkyBuffer::hasSpaceToWrite(BufferOffset size) const {
@@ -132,26 +154,26 @@ namespace Talky {
 		if (readOffset >= allocatedSize)
 			return 0;
 		else
-			return (allocatedSize - readOffset);
+			return (writtenSize - readOffset);
 	}
 	
-	bool TalkyBuffer::write(const void *data, BufferOffset size) {
+	bool TalkyBuffer::write(const void *d, BufferOffset size) {
 		if (!hasSpaceToWrite(size))
 			if (!reAllocate(writeOffset + size))
 				return false;
 		
-		memcpy((char*)data + writeOffset, data, size);
+		memcpy(this->getWritePointer(), d, size);
 		
 		advanceWritePointer(size);
 		
 		return true;
 	}
 	
-	bool TalkyBuffer::read(void *data, BufferOffset size) {
+	bool TalkyBuffer::read(void *d, BufferOffset size) {
 		if (!hasSpaceToRead(size))
 			return false;
 		
-		memcpy(data, (char*)data + readOffset, size);
+		memcpy(d, this->getReadPointer(), size);
 		
 		advanceReadPointer(size);
 		
@@ -185,7 +207,7 @@ namespace Talky {
 			return false;
 		
 		other.allocate(size);
-		other.setData(data + readOffset, size);
+		other.setData(_data + readOffset, size);
 		readOffset += size;
 	}
 	
@@ -201,8 +223,8 @@ namespace Talky {
 		
 		for (i=0; i<maxLength; i++)
 		{
-			if (data[i] > 32)
-				out << data[i];
+			if (_data[i] > 32)
+				out << _data[i];
 			else
 				out << ".";
 		}
@@ -214,7 +236,7 @@ namespace Talky {
 	//------
 	
 	char* TalkyBuffer::getWritePointer() {
-		return data + writeOffset;
+		return _data + writeOffset;
 	}
 	
 	void TalkyBuffer::advanceWritePointer(BufferOffset s) {
@@ -227,7 +249,7 @@ namespace Talky {
 	}
 	
 	char* TalkyBuffer::getReadPointer() {
-		return data + readOffset;
+		return _data + readOffset;
 	}
 	
 	void TalkyBuffer::advanceReadPointer(BufferOffset s) {

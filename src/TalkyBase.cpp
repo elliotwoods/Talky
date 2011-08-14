@@ -233,15 +233,18 @@ namespace Talky {
 		
 		
 		
+		lockThread();
+		
 		/////////////////////////////////////
 		// RECEIVE DATA
 		/////////////////////////////////////
 		//		
 		//
+		//
 		if (nodeType == 1)
 		{	
 			if (isClientConnected())
-			{			
+			{				
 				//client
 				_bufferIn.clean();
 				rxClient();
@@ -298,13 +301,11 @@ namespace Talky {
 			
 			if (hasDataToSend)
 				tx();
-			
-			
 		}
 		//
 		/////////////////////////////////////
 		
-		
+		unlockThread();
 	}
 
 	bool TalkyBase::rxServer(int iClient) {
@@ -354,9 +355,7 @@ namespace Talky {
 			_bufferOut.clean();
 	}
 	
-	void TalkyBase::processIncomingBuffer() {		
-		lockThread();
-		
+	void TalkyBase::processIncomingBuffer() {	
 		//perhaps recode this so we dont copy?
 		TalkyMessage msg;
 		while (_bufferIn >> msg)
@@ -369,7 +368,5 @@ namespace Talky {
 		//processing will be performed in this thread
 		int msgCount = receiveQueue.size();
 		notifyReceiveEvent(msgCount);
-		
-		unlockThread();
 	}
 }

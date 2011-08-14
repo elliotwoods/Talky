@@ -43,9 +43,14 @@ namespace Talky {
 		
 		char			protocol[2];
 		unsigned short	version;
-		unsigned long	timestamp;
 		
 		unsigned short	contentsType;
+		
+		/** Timestamp for the message. 
+		 This is set automatically when the header
+		 is assigned to the message
+		 */
+		unsigned long	timestamp;
 	};
 	
 	//------

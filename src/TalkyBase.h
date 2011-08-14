@@ -35,11 +35,11 @@ namespace Talky {
 		// FOR ERROR HANDLING
 		////////////////////////////////
 		//
-		//setup as client
-		virtual void    setup(string remoteHost, int remotePort);
+		///setup as client on (default port=5001)
+		virtual void    setup(string remoteHost, int remotePort=5001);
 		
-		//setup as server
-		virtual void    setup(int localPort);
+		///setup as server (default port=5001)
+		virtual void    setup(int localPort=5001);
 
 		virtual bool	getIsServerBound();
 		virtual int		getNumClients();

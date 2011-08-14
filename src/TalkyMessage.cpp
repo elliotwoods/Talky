@@ -18,7 +18,6 @@ namespace Talky {
 	TalkyMessageHeader::TalkyMessageHeader() :
 	version(0),
 	contentsType(0) {
-		setTimestamp();
 	}
 	
 	TalkyMessageHeader::TalkyMessageHeader(const char * Company, const char * Protocol, unsigned short Version, unsigned short ContentsType)
@@ -124,6 +123,7 @@ namespace Talky {
 
 	void TalkyMessage::setHeader(Talky::TalkyMessageHeader const &h) {
 		header = h;
+		header.setTimestamp();
 	}
 	
 	int TalkyMessage::getTotalLength() const {

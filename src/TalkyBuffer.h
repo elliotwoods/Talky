@@ -9,6 +9,7 @@
 
 #include <sstream>
 #include <string>
+#include <iostream>
 
 using namespace std;
 
@@ -24,8 +25,12 @@ namespace Talky {
 	public:
 		TalkyBuffer();
 		TalkyBuffer(BufferOffset size);
+		TalkyBuffer(const TalkyBuffer&  other);
 		
 		~TalkyBuffer();
+		
+		///copy operator
+		TalkyBuffer& operator= (const TalkyBuffer & other);
 		
 		void	allocate(BufferOffset size);
 		void	deAllocate();
@@ -93,16 +98,24 @@ namespace Talky {
 		 */
 		void	advanceReadPointer(BufferOffset);
 		
+		bool getIsAllocated() const { return isAllocated; };
+		bool getIsDynamicallyAllocated() const { return isDynamicallyAllocated; };
+		bool getIsQuickReallocation() const { return quickReallocation; };
+		BufferOffset getAllocatedSize() const { return allocatedSize; };
+		BufferOffset getWrittenSize() const { return writtenSize; };
+		BufferOffset getReadOffset() const { return readOffset; };
+		BufferOffset getWriteOffset() const { return writeOffset; };
+		
 	protected:
 		void	init();
 		
-		bool	write(const void* data, BufferOffset size);
-		bool	read(void* data, BufferOffset size);
+		bool	write(const void* d, BufferOffset size);
+		bool	read(void* d, BufferOffset size);
 		
 		///Used to perform dynamic reallocation. Returns false if we're dynamic allocation is turned off.
 		bool	reAllocate(BufferOffset s);
 		
-		char*			data;
+		char*			_data;
 		
 		///Does this buffer have space allocated?
 		bool			isAllocated;
