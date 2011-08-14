@@ -10,6 +10,7 @@
 
 #define TALKY_SLEEP_TIME 10
 #define TALKY_RECONNECT_TIME 200
+#define TALKY_DEFAULT_PORT 5001
 
 #define TALKY_BUFFER_IN_SIZE 100000
 #define TALKY_BUFFER_OUT_SIZE 100000
@@ -36,10 +37,10 @@ namespace Talky {
 		////////////////////////////////
 		//
 		///setup as client on (default port=5001)
-		virtual void    setup(string remoteHost, int remotePort=5001);
+		virtual void    setup(string remoteHost, int remotePort=TALKY_DEFAULT_PORT);
 		
 		///setup as server (default port=5001)
-		virtual void    setup(int localPort=5001);
+		virtual void    setup(int localPort=TALKY_DEFAULT_PORT);
 
 		virtual bool	getIsServerBound();
 		virtual int		getNumClients();
