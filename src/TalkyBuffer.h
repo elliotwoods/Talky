@@ -10,6 +10,7 @@
 #include <sstream>
 #include <string>
 #include <iostream>
+#include <fstream>
 
 using namespace std;
 
@@ -21,7 +22,18 @@ namespace Talky {
 	*/
 	typedef unsigned long BufferOffset;
 	
-	class TalkyBuffer {
+	class TalkyBuffer;
+	
+	/** TalkySerialisable is an interface class for when
+	 you want to override standard serialisation methods.
+	 */
+	class TalkySerialisable {
+	public:
+		virtual void	serialiseToBuffer(TalkyBuffer &b) const = 0;
+		virtual bool	deSerialiseFromBuffer(TalkyBuffer &b) = 0;
+	};
+	
+	class TalkyBuffer : TalkySerialisable {
 	public:
 		TalkyBuffer();
 		TalkyBuffer(BufferOffset size);
@@ -38,18 +50,16 @@ namespace Talky {
 		
 		BufferOffset size() const;
 		const void * getData() const;
-		void setData(const void * d, BufferOffset size);
+		void	setData(const void * d, BufferOffset size);
+		
+		bool	write(const void* d, BufferOffset size);
+		bool	read(void* d, BufferOffset size);
 		
 		bool		hasSpaceToWrite(BufferOffset size) const;
 		bool		hasSpaceToRead(BufferOffset size) const;
 		BufferOffset	getRemainingWriteSpace() const;
 		BufferOffset	getRemainingReadSpace() const;
-		
-		///Used when putting a payload onto main buffers
-		TalkyBuffer& operator<<(TalkyBuffer const &other);
-		///Used when pulling a payload off main buffers
-		bool operator>>(TalkyBuffer &other) const;
-		
+				
 		template<class T>
 		TalkyBuffer& operator<<(T const &object) {
 			if (!write(&object, sizeof(T)))
@@ -64,7 +74,6 @@ namespace Talky {
 			return *this
 		}
 */		
-		bool operator>>(TalkyBuffer &other);
 		
 		template<class T>
 		bool operator>>(T& object) {
@@ -106,11 +115,18 @@ namespace Talky {
 		BufferOffset getReadOffset() const { return readOffset; };
 		BufferOffset getWriteOffset() const { return writeOffset; };
 		
+		
+		//TalkyBuffer inherits TalkySerialisable
+		void	serialiseToBuffer(TalkyBuffer &b) const;
+		bool	deSerialiseFromBuffer(TalkyBuffer &b);
+		
+		
+		//File access
+		bool	loadFile(string filename);
+		bool	saveFile(string filename) const;
+		
 	protected:
 		void	init();
-		
-		bool	write(const void* d, BufferOffset size);
-		bool	read(void* d, BufferOffset size);
 		
 		///Used to perform dynamic reallocation. Returns false if we're dynamic allocation is turned off.
 		bool	reAllocate(BufferOffset s);
@@ -134,4 +150,5 @@ namespace Talky {
 		BufferOffset	writeOffset;
 		
 	};
+
 }

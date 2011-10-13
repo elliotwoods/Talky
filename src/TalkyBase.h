@@ -20,6 +20,7 @@
 #include <vector>
 #include <ctime>
 #include <iostream>
+#include <sstream>
 
 using namespace std;
 
@@ -51,13 +52,10 @@ namespace Talky {
 		float	getTimeUntilNextConnectNorm();
 		
 		string  getRemoteHost(); ///< Get the hostname of remote machine. Perhaps split this into 2 functions? or warn if we use this for client?
-				
-		TalkyBase&	operator<<(TalkyMessage& msg);
-		bool		operator>>(TalkyMessage& msg);
 		
-		void    send(TalkyMessage &msg);
-		bool	popMessage(TalkyMessage &msg);
-		void	clearMessages();
+		TalkyBase&	operator<<(const TalkyMessage& m); ///<send message
+		bool		operator>>(TalkyMessage& m); ///<receive message
+		void		clearMessages();
 		
 		
 		/** Direct access to the receiveQueue.
@@ -66,6 +64,7 @@ namespace Talky {
 		vector<TalkyMessage> const	&getReceiveQueue() {return receiveQueue; };
 		vector<TalkyMessage> const	&getSendQueue() { return sendQueue;};
 		
+		string toString();
 		
 	protected:
 		void update();

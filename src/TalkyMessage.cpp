@@ -20,15 +20,35 @@ namespace Talky {
 	contentsType(0) {
 	}
 	
-	TalkyMessageHeader::TalkyMessageHeader(const char * Company, const char * Protocol, unsigned short Version, unsigned short ContentsType)
+	TalkyMessageHeader::TalkyMessageHeader(TalkyMessageHeader& other, ContentsType t)
+	{
+		setCompany(other.getCompany());
+		setProtocol(other.getProtocol());
+		setVersion(other.getVersion());
+		setContentsType(t);
+	}
+	
+	TalkyMessageHeader::TalkyMessageHeader(const char * Company, const char * Protocol, ProtocolVersion v, ContentsType t)
 	{
 		setCompany(Company);
 		setProtocol(Protocol);
-		setVersion(Version);
-		setContentsType(ContentsType);
+		setVersion(v);
+		setContentsType(t);
 	}
 	
-	unsigned short TalkyMessageHeader::getContentsType() const {
+	const char* TalkyMessageHeader::getCompany() const {
+		return company;
+	}
+	
+	const char* TalkyMessageHeader::getProtocol() const {
+		return protocol;
+	}
+	
+	ProtocolVersion TalkyMessageHeader::getVersion() const {
+		return version;
+	}
+	
+	ContentsType TalkyMessageHeader::getContentsType() const {
 		return contentsType;
 	}
 	
@@ -69,6 +89,14 @@ namespace Talky {
 		return out.str();
 
 	}
+	
+	bool TalkyMessageHeader::operator==(const TalkyMessageHeader &other) const {
+		return
+		company == other.getCompany() &&
+		protocol == other.getProtocol() &&
+		version == other.getVersion() &&
+		contentsType == other.getContentsType();
+	}
 	//
 	//------------------------------------------------------
 	
@@ -78,6 +106,11 @@ namespace Talky {
 	//------------------------------------------------------
 	//
 	TalkyMessage::TalkyMessage() {
+		header = defaultHeader;
+	}
+	
+	TalkyMessage::TalkyMessage(TalkyMessageHeader const &h) {
+		header = h;
 	}
 
 	bool TalkyMessage::serialise(TalkyBuffer &buf) const {
@@ -162,6 +195,14 @@ namespace Talky {
 	void TalkyMessage::initPayload(unsigned short length)
 	{
 		payload.allocate(length);
+	}
+	
+	//------
+	
+	TalkyMessageHeader TalkyMessage::defaultHeader = TalkyMessageHeader("KC", "Ta", 0, 0);
+	
+	void TalkyMessage::setDefaultHeader(Talky::TalkyMessageHeader &h) {
+		defaultHeader = h;
 	}
 	//
 	//------------------------------------------------------

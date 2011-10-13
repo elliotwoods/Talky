@@ -22,12 +22,19 @@ using namespace std;
 
 namespace Talky {
 	
+	typedef unsigned short ContentsType;
+	typedef unsigned short ProtocolVersion;
+	
 	class TalkyMessageHeader {
 	public:
 		TalkyMessageHeader();
-		TalkyMessageHeader(const char * Company, const char * Protocol, unsigned short Version, unsigned short ContentsType);
+		TalkyMessageHeader(TalkyMessageHeader& other, ContentsType t); 
+		TalkyMessageHeader(const char * Company, const char * Protocol, ProtocolVersion v, ContentsType t);
 		
-		unsigned short	getContentsType() const;
+		const char*		getCompany() const;
+		const char*		getProtocol() const;
+		ProtocolVersion	getVersion() const;
+		ContentsType	getContentsType() const;
 		unsigned long	getTimestamp() const;
 		
 		void	setCompany(const char * s);
@@ -37,6 +44,8 @@ namespace Talky {
 		void	setTimestamp();
 		
 		string	toString();
+		
+		bool	operator==(const TalkyMessageHeader &other) const;
 		
 	protected:
 		char			company[2];
@@ -60,9 +69,10 @@ namespace Talky {
 		friend class TalkyBuffer;
 		
 		TalkyMessage();
+		TalkyMessage(TalkyMessageHeader const &h);
 		
 		template <class T>
-		TalkyMessage& operator<<(T &object)
+		TalkyMessage& operator<<(const T &object)
 		{
 			payload << object;
 		}
@@ -102,10 +112,14 @@ namespace Talky {
 		 syntax. Deserialise may be depreciated / made private
 		 */		
 		bool	deSerialise(TalkyBuffer &buf);
-
+		
+		static void	setDefaultHeader(TalkyMessageHeader &h);
+		
 	protected:
 		TalkyMessageHeader	header;
-		TalkyBuffer			payload;		
+		TalkyBuffer			payload;
+		
+		static TalkyMessageHeader	defaultHeader;
 	};
 	
 	//-----
@@ -114,5 +128,4 @@ namespace Talky {
 	TalkyBuffer& operator<<(TalkyBuffer& b, TalkyMessage const &m);
 	///Used when pulling a message off main buffer
 	bool operator>>(TalkyBuffer& b, TalkyMessage &m);
-
 }

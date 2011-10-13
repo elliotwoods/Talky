@@ -126,33 +126,21 @@ namespace Talky {
 	
 	//-----------------------------------------------------------
 	
-	TalkyBase& TalkyBase::operator<<(TalkyMessage& msg) {
-		send(msg);
+	TalkyBase& TalkyBase::operator<<(const TalkyMessage &m) {
+		lockThread();
+		sendQueue.push_back(m);
+		unlockThread();
+		
 		return *this;
 	}
 	
-	bool TalkyBase::operator>>(TalkyMessage& msg) {
-		return popMessage(msg);
-	}
-
-	//-----------------------------------------------------------
-	
-
-	void TalkyBase::send(TalkyMessage &msg)
-	{
-		lockThread();
-		sendQueue.push_back(msg);
-		unlockThread();
-	}
-
-	bool TalkyBase::popMessage(TalkyMessage &msg)
-	{
+	bool TalkyBase::operator>>(TalkyMessage& m) {
 		if (!lockThread())
 			return false;
 		
 		if (receiveQueue.size() > 0)
 		{
-			msg = receiveQueue.front();
+			m = receiveQueue.front();
 			receiveQueue.erase(receiveQueue.begin());
 			
 			unlockThread();
@@ -161,7 +149,6 @@ namespace Talky {
 			unlockThread();
 			return false;
 		}
-		
 	}
 
 	void TalkyBase::clearMessages()
@@ -368,5 +355,25 @@ namespace Talky {
 		//processing will be performed in this thread
 		int msgCount = receiveQueue.size();
 		notifyReceiveEvent(msgCount);
+	}
+	
+	string TalkyBase::toString() {
+		stringstream out;
+		
+		out  << "Talky node is ";
+		switch (nodeType) {
+			case 0:
+				out << "uninitialised." << endl;
+				break;
+				
+			case 1:
+				out << "a client, connecting to " << _remoteHost << " on port " << _remotePort << "." << endl;			
+				break;
+				
+			case 2:
+				out << "a server on local port " << _localPort << ", with " << getNumClients() << " clients" << endl;
+		}
+		
+		return out.str();
 	}
 }

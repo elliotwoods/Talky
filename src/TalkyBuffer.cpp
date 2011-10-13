@@ -182,35 +182,81 @@ namespace Talky {
 	
 	//------
 	
-	TalkyBuffer& TalkyBuffer::operator<<(TalkyBuffer const &other) {
-
-		const BufferOffset size = other.size();
+	void TalkyBuffer::serialiseToBuffer(TalkyBuffer &other) const {
+		const BufferOffset s = this->size();
+		other << s;
 		
-		*this << size;
-		
-		if (write(other.getData(), other.size()))
-			return *this;
-		else
+		if (!other.write(getData(), s))
 			throw("Buffer overrun - insufficient space to write");
 	}
 	
-	bool TalkyBuffer::operator>>(TalkyBuffer &other) {		
-		
-		if (!hasSpaceToRead(sizeof(BufferOffset)))
-			return false;
-			
-		BufferOffset size;
-			
-		*this >> size;
-		
-		if (!hasSpaceToRead(size))
+	bool TalkyBuffer::deSerialiseFromBuffer(TalkyBuffer &other) {
+		BufferOffset s;
+		if (!(other >> s))
 			return false;
 		
-		other.allocate(size);
-		other.setData(_data + readOffset, size);
-		readOffset += size;
+		if (!other.hasSpaceToRead(s))
+			return false;
+		
+		//clear our local data and replace
+		//with section of other buffer's data
+		setData(other.getData(), s);
+		
+		return true;
 	}
 	
+	//------
+	bool TalkyBuffer::loadFile(string filename) {
+		
+		
+		// this is untested
+		
+		ifstream inFile;
+		
+		if (inFile.is_open()) {
+			try {
+				
+				inFile.open(filename.c_str(), ios::binary);
+
+				//find filesize
+				long begin, end;
+				begin = inFile.tellg();
+				inFile.seekg (0, ios::end);
+				end = inFile.tellg();
+				
+				//allocate to this size
+				allocate(end - begin);
+				
+				inFile.read(_data, end-begin);
+			
+				if (inFile.fail())
+					throw;
+			} catch (...) {
+				if (inFile.is_open())
+					inFile.close();
+				return false;
+			}
+			
+			inFile.close();
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	bool TalkyBuffer::saveFile(string filename) const {
+		ofstream outFile;
+		try {
+			outFile.open(filename.c_str(), ios::binary | ios::out | ios::trunc);
+			outFile.write(_data, size());
+		} catch (...) {
+			if (outFile.is_open())
+				outFile.close();
+			return false;
+		}
+		outFile.close();
+		return true;
+	}
 	//------
 	
 	string TalkyBuffer::toString(unsigned short maxLength) const {
