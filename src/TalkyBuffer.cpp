@@ -200,7 +200,8 @@ namespace Talky {
 		
 		//clear our local data and replace
 		//with section of other buffer's data
-		setData(other.getData(), s);
+		setData(other.getReadPointer(), s);
+		other.advanceReadPointer(s);
 		
 		return true;
 	}
@@ -304,5 +305,16 @@ namespace Talky {
 		if (s > allocatedSize)
 			throw ("TalkyBuffer::advanceReadPointer : Buffer overrun error");
 	}
+	
+	//------
+	
+	TalkyBuffer& operator<<(TalkyBuffer &b, TalkySerialisable const &o) {
+		o.serialiseToBuffer(b);
+		return b;
+	}
+	
+	bool operator>>(TalkyBuffer &b, TalkySerialisable& o) {
+		return o.deSerialiseFromBuffer(b);
+	}	
 	
 }

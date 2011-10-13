@@ -124,8 +124,8 @@ namespace Talky {
 	
 	//-----
 	
-	///Used when putting a message onto main buffer
+	///Used when putting a message onto main buffer (tx)
 	TalkyBuffer& operator<<(TalkyBuffer& b, TalkyMessage const &m);
-	///Used when pulling a message off main buffer
+	///Used when pulling a message off main buffer (rx)
 	bool operator>>(TalkyBuffer& b, TalkyMessage &m);
 }

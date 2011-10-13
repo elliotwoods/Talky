@@ -33,7 +33,7 @@ namespace Talky {
 		virtual bool	deSerialiseFromBuffer(TalkyBuffer &b) = 0;
 	};
 	
-	class TalkyBuffer : TalkySerialisable {
+	class TalkyBuffer : public TalkySerialisable {
 	public:
 		TalkyBuffer();
 		TalkyBuffer(BufferOffset size);
@@ -59,21 +59,13 @@ namespace Talky {
 		bool		hasSpaceToRead(BufferOffset size) const;
 		BufferOffset	getRemainingWriteSpace() const;
 		BufferOffset	getRemainingReadSpace() const;
-				
+		
 		template<class T>
 		TalkyBuffer& operator<<(T const &object) {
 			if (!write(&object, sizeof(T)))
 				throw("Buffer overrun - insufficient space to write");
 			return *this;
 		}
-		
-/*		template<class T>
-		TalkyBuffer& operator<<(T const object) {
-			if (!write(&object, sizeof(T)))
-				throw("Buffer overrun - insufficient space to write");
-			return *this
-		}
-*/		
 		
 		template<class T>
 		bool operator>>(T& object) {
@@ -82,7 +74,6 @@ namespace Talky {
 		}
 		
 		string toString(unsigned short maxLength=10) const;
-		
 		
 		
 		/**
@@ -150,5 +141,9 @@ namespace Talky {
 		BufferOffset	writeOffset;
 		
 	};
-
+	
+	///Overload template when serialising a TalkySerialisable object
+	TalkyBuffer& operator<<(TalkyBuffer& b, TalkySerialisable const &o);
+	///Overload template when deserialising to a TalkySerialisable object
+	bool operator>>(TalkyBuffer& b, TalkySerialisable &o);
 }

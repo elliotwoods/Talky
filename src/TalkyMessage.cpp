@@ -120,7 +120,7 @@ namespace Talky {
 		
 		buf << TALKY_START_TOKEN;
 		buf << header;
-		buf << payload;
+		buf << (TalkySerialisable&) payload;
 		buf << TALKY_END_TOKEN;		
 		
 		return true;		
@@ -139,7 +139,7 @@ namespace Talky {
 			 throw("Message corrupt!");
 		
 		buf >> header;
-		buf >> payload;
+		buf >> (TalkySerialisable&) payload;
 		
 		buf >> token;
 		if (token != TALKY_END_TOKEN)
