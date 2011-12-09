@@ -41,9 +41,10 @@ namespace Talky {
 		readOffset = other.getReadOffset();
 		writeOffset = other.getWriteOffset();
 		
-		
 		_data = new char[allocatedSize];
 		memcpy(_data, other.getData(), allocatedSize);
+
+		return *this;
 	}
 	
 	//------
@@ -187,7 +188,7 @@ namespace Talky {
 		other << s;
 		
 		if (!other.write(getData(), s))
-			throw("Buffer overrun - insufficient space to write");
+			throw(new TalkyException("Buffer overrun - insufficient space to write"));
 	}
 	
 	bool TalkyBuffer::deSerialiseFromBuffer(TalkyBuffer &other) {
@@ -292,7 +293,7 @@ namespace Talky {
 			writtenSize = writeOffset;
 		
 		if (s > allocatedSize)
-			throw ("TalkyBuffer::advanceWritePointer : Buffer overrun error");
+			throw (new TalkyException("TalkyBuffer::advanceWritePointer : Buffer overrun error"));
 	}
 	
 	char* TalkyBuffer::getReadPointer() {
@@ -303,7 +304,7 @@ namespace Talky {
 		readOffset += s;
 		
 		if (s > allocatedSize)
-			throw ("TalkyBuffer::advanceReadPointer : Buffer overrun error");
+			throw (new TalkyException("TalkyBuffer::advanceReadPointer : Buffer overrun error"));
 	}
 	
 	//------
