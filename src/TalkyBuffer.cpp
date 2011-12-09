@@ -208,42 +208,32 @@ namespace Talky {
 	}
 	
 	//------
-	bool TalkyBuffer::loadFile(string filename) {
-		
-		
-		// this is untested
-		
+	bool TalkyBuffer::loadFile(string filename) {	
 		ifstream inFile;
-		
-		if (inFile.is_open()) {
-			try {
-				
-				inFile.open(filename.c_str(), ios::binary);
+		try {
+			inFile.open(filename.c_str(), ios::binary);
 
-				//find filesize
-				long begin, end;
-				begin = inFile.tellg();
-				inFile.seekg (0, ios::end);
-				end = inFile.tellg();
+			//find filesize
+			long end;
+			inFile.seekg (0, ios::end);
+			end = inFile.tellg();
+			inFile.seekg(0, ios::beg);
 				
-				//allocate to this size
-				allocate(end - begin);
+			//allocate to this size
+			allocate(end);
 				
-				inFile.read(_data, end-begin);
+			inFile.read(_data, end);
 			
-				if (inFile.fail())
-					throw;
-			} catch (...) {
-				if (inFile.is_open())
-					inFile.close();
-				return false;
-			}
-			
-			inFile.close();
-			return true;
-		} else {
+			if (inFile.fail())
+				throw;
+		} catch (...) {
+			if (inFile.is_open())
+				inFile.close();
 			return false;
 		}
+			
+		inFile.close();
+		return true;
 	}
 	
 	bool TalkyBuffer::saveFile(string filename) const {
