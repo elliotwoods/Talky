@@ -21,62 +21,63 @@ using namespace std;
 #define TALKY_END_TOKEN '\n'
 
 namespace Talky {
-	
+
 	typedef unsigned short ContentsType;
 	typedef unsigned short ProtocolVersion;
-	
+
 	class TalkyMessageHeader {
 	public:
 		TalkyMessageHeader();
-		TalkyMessageHeader(TalkyMessageHeader& other, ContentsType t); 
+		TalkyMessageHeader(TalkyMessageHeader& other, ContentsType t);
 		TalkyMessageHeader(const char * Company, const char * Protocol, ProtocolVersion v, ContentsType t);
-		
+
 		const char*		getCompany() const;
 		const char*		getProtocol() const;
 		ProtocolVersion	getVersion() const;
 		ContentsType	getContentsType() const;
 		unsigned long	getTimestamp() const;
-		
+
 		void	setCompany(const char * s);
 		void	setProtocol(const char * s);
 		void	setVersion(unsigned short v);
 		void	setContentsType(unsigned short t);
 		void	setTimestamp();
-		
+
 		string	toString();
-		
+
 		bool	operator==(const TalkyMessageHeader &other) const;
-		
+
 	protected:
 		char			company[2];
-		
+
 		char			protocol[2];
 		unsigned short	version;
-		
+
 		unsigned short	contentsType;
-		
-		/** Timestamp for the message. 
+
+		/** Timestamp for the message.
 		 This is set automatically when the header
 		 is assigned to the message
 		 */
 		unsigned long	timestamp;
 	};
-	
+
 	//------
-	
+
 	class TalkyMessage {
 	public:
 		friend class TalkyBuffer;
-		
+
 		TalkyMessage();
 		TalkyMessage(TalkyMessageHeader const &h);
-		
+
 		template <class T>
 		TalkyMessage& operator<<(const T &object)
 		{
 			payload << object;
+			return *this;
 		}
-		
+
 		template <class T>
 		bool operator>>(T &object)
 		{
@@ -85,45 +86,45 @@ namespace Talky {
 			else
 				return false;
 		}
-		
+
 		const TalkyBuffer&			getPayload() const;
 		const TalkyMessageHeader&	getHeader() const;
-		
+
 		void					setHeader(TalkyMessageHeader const &h);
-		
+
 		int						getTotalLength() const;
 		unsigned short			getPayloadLength() const;
 		void					initPayload(unsigned short length);
 		string					toString();
-		
+
 		///for sorting by timestamp
 		bool operator<(const TalkyMessage& other) const;
-		
+
 		/** Serialise this onto main buffer.
-		 Consider instead using 
+		 Consider instead using
 		 buf << msg;
 		 syntax. Serialise may be depreciated / made private
-		 */		
+		 */
 		bool	serialise(TalkyBuffer &buf) const;
-		
+
 		/** Deserialise this off of main buffer.
-		 Consider instead using 
+		 Consider instead using
 		 buf >> msg;
 		 syntax. Deserialise may be depreciated / made private
-		 */		
+		 */
 		bool	deSerialise(TalkyBuffer &buf);
-		
+
 		static void	setDefaultHeader(TalkyMessageHeader &h);
-		
+
 	protected:
 		TalkyMessageHeader	header;
 		TalkyBuffer			payload;
-		
+
 		static TalkyMessageHeader	defaultHeader;
 	};
-	
+
 	//-----
-	
+
 	///Used when putting a message onto main buffer (tx)
 	TalkyBuffer& operator<<(TalkyBuffer& b, TalkyMessage const &m);
 	///Used when pulling a message off main buffer (rx)

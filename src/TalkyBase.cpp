@@ -15,7 +15,7 @@ namespace Talky {
 	// PUBLIC
 	//
 
-	TalkyBase::TalkyBase() : 
+	TalkyBase::TalkyBase() :
 	nodeType(0),
 	lastConnectAttempt(0),
 	isConnected(false),
@@ -23,7 +23,7 @@ namespace Talky {
 	_bufferIn(TALKY_BUFFER_IN_SIZE),
 	_bufferOut(TALKY_BUFFER_OUT_SIZE)
 	{
-		
+
 	}
 
 	TalkyBase::~TalkyBase()
@@ -32,24 +32,24 @@ namespace Talky {
 			throw("You need to implement a destructor in your Talky class. Check  TalkyBase::~TalkyBase() for notes");
 	  /*
 	   //implement the following in destructor of TalkyBase implementing class. Example code from ofxTalky:
-	   
+
 	   if (nodeType==0)
 		   return;
-	   
+
 	   stopThread(true);
-	   
+
 	   if (nodeType == 1)
 	   {
 		   tcpClient->close();
 		   delete tcpClient;
 	   }
-	   
+
 	   if (nodeType == 2)
 	   {
 		   tcpServer->close();
 		   delete tcpServer;
 	   }
-	   
+
 	   */
 	}
 
@@ -62,16 +62,16 @@ namespace Talky {
 			throw(string("Already initialised as node type ") + (nodeType==1 ? string("server") : string("client")));
 			return;
 		}
-		
-		
+
+
 		_remoteHost = remoteHost;
 		_remotePort = remotePort;
-		
+
 		initClient();
 		beginThread();
-		
+
 		nodeType = 1;
-		
+
 	}
 
 	//SERVER SETUP
@@ -82,14 +82,14 @@ namespace Talky {
 			throw("Already initialised as node type " + (nodeType==1 ? string("server") : string("client")));
 			return;
 		}
-		
+
 		_localPort = localPort;
-		
+
 		initServer();
 		beginThread();
-		
+
 		nodeType = 2;
-		
+
 	}
 
 	bool TalkyBase::getIsServerBound()
@@ -113,36 +113,36 @@ namespace Talky {
 	float TalkyBase::getTimeUntilNextConnectNorm()
 	{
 		float frac =  float(clock() / CLOCKS_PER_MILLISEC - lastConnectAttempt) / float(TALKY_RECONNECT_TIME);
-		
+
 		return (frac < 1.0f ? frac : 1.0f);
 	}
-	
+
 	string TalkyBase::getRemoteHost(){
 		if (nodeType == 1)
 			return _remoteHost;
 		else
 			return "";
 	}
-	
+
 	//-----------------------------------------------------------
-	
+
 	TalkyBase& TalkyBase::operator<<(const TalkyMessage &m) {
 		lockThread();
 		sendQueue.push_back(m);
 		unlockThread();
-		
+
 		return *this;
 	}
-	
+
 	bool TalkyBase::operator>>(TalkyMessage& m) {
 		if (!lockThread())
 			return false;
-		
+
 		if (receiveQueue.size() > 0)
 		{
 			m = receiveQueue.front();
 			receiveQueue.erase(receiveQueue.begin());
-			
+
 			unlockThread();
 			return true;
 		} else	{
@@ -161,9 +161,9 @@ namespace Talky {
 			sleep(10);
 #endif
 		}
-		
+
 		receiveQueue.clear();
-		
+
 		unlockThread();
 	}
 
@@ -176,7 +176,7 @@ namespace Talky {
 	{
 		if (nodeType == 0)
 			return;
-		
+
 		/////////////////////////////////////
 		// CHECK RECONNECTS
 		/////////////////////////////////////
@@ -184,7 +184,7 @@ namespace Talky {
 		int currentTime = clock() / CLOCKS_PER_MILLISEC;
 		if (currentTime - lastConnectAttempt > TALKY_RECONNECT_TIME)
 		{
-			
+
 			if (nodeType == 1) {
 				//client
 				if (!isConnected)
@@ -201,77 +201,77 @@ namespace Talky {
 				//server
 				isConnected = isServerConnected();
 			}
-			
-			
+
+
 			if (!isConnected && nodeType==1) {
 				//client
 				startClient();
 				isConnected = isClientConnected();
-				
+
 				if (isConnected)
 					notifyClientIsNowConnected();
 			}
-			
-			
+
+
 			if (!isServerBound && nodeType==2) {
 				//server
 				startServer();
 				isConnected = isServerConnected();
 			}
-			
+
 			lastConnectAttempt = currentTime;
 		}
 		//
 		/////////////////////////////////////
-		
-		
-		
+
+
+
 		lockThread();
-		
+
 		/////////////////////////////////////
 		// RECEIVE DATA
 		/////////////////////////////////////
-		//		
+		//
 		//
 		//
 		if (nodeType == 1)
-		{	
+		{
 			if (isClientConnected())
-			{				
+			{
 				//client
 				_bufferIn.clean();
 				rxClient();
 				processIncomingBuffer();
 			}
-			
+
 		} else {
-			
+
 			//server
 			if (getNumServerClients() > 0) {
-				
+
 				if (lockServer())
 				{
 					for (int iRemote=0; iRemote<getNumServerClients() ; iRemote++)
 					{
 						if (!isServersClientConnected(iRemote))
-							continue; 
-						
+							continue;
+
 						_bufferIn.clean();
-						rxServer(iRemote);				
+						rxServer(iRemote);
 						processIncomingBuffer();
-						
+
 					}
 					unlockServer();
 				}
-				
+
 			}
 		}
-			
+
 		//
 		/////////////////////////////////////
-		
-		
-		
+
+
+
 		/////////////////////////////////////
 		// SEND DATA
 		/////////////////////////////////////
@@ -279,7 +279,7 @@ namespace Talky {
 		if (isConnected)
 		{
 			bool hasDataToSend = false;
-			
+
 			try {
 				while (sendQueue.size() > 0)
 				{
@@ -291,31 +291,38 @@ namespace Talky {
 				//buffer overrun
 				throwWarning("Buffer overrun, waiting until next frame to send remaining messages");
 			}
-			
+
 			if (hasDataToSend)
 				tx();
 		}
 		//
 		/////////////////////////////////////
-		
+
 		unlockThread();
 	}
 
 	bool TalkyBase::rxServer(int iClient) {
 		const int nBytesReceived = rxServer(iClient, _bufferIn.getWritePointer(), _bufferIn.getRemainingWriteSpace());
-		
-		try
-		{
+
+		try {
 			_bufferIn.advanceWritePointer(nBytesReceived);
-		} catch 
+		} catch (TalkyException e) {
+		    return false;
+		}
+		return true;
 	}
-	
+
 	bool TalkyBase::rxClient() {
 		const int nBytesReceived = rxClient(_bufferIn.getWritePointer(), _bufferIn.getRemainingWriteSpace());
-		
-		_bufferIn.advanceWritePointer(nBytesReceived);		
+
+        try {
+            _bufferIn.advanceWritePointer(nBytesReceived);
+        } catch (TalkyException e) {
+            return false;
+        }
+        return true;
 	}
-	
+
 	void TalkyBase::tx() {
 		if (nodeType == 0) {
 			throwWarning("TalkyBase::tx : can't send, we're not initialsed as either a client or server");
@@ -324,65 +331,65 @@ namespace Talky {
 		if (nodeType == 1) {
 			//client
 			txClient();
-			
+
 		} else if (nodeType == 2) {
 			//server
 			for (int iClient=0; iClient < getNumServerClients(); iClient++)
 				txServer(iClient, false);
-			
+
 			//only clean the buffer once
 			_bufferOut.clean();
 		}
 	}
-	
+
 	void TalkyBase::txServer(int iClient, bool clean) {
 		int nBytesSending = _bufferOut.getRemainingReadSpace();
 		txServer(iClient, _bufferOut.getReadPointer(), nBytesSending);
-		
+
 		if (clean)
 			_bufferOut.clean();
 	}
-	
+
 	void TalkyBase::txClient(bool clean) {
 		int nBytesSending = _bufferOut.getRemainingReadSpace();
 		txClient(_bufferOut.getReadPointer(), nBytesSending);
-		
+
 		if (clean)
 			_bufferOut.clean();
 	}
-	
-	void TalkyBase::processIncomingBuffer() {	
+
+	void TalkyBase::processIncomingBuffer() {
 		//perhaps recode this so we dont copy?
 		TalkyMessage msg;
 		while (_bufferIn >> msg)
 			receiveQueue.push_back(msg);
-		
+
 		//sort by timestamp
 		sort(receiveQueue.begin(), receiveQueue.end());
-		
+
 		//trigger message available event.
 		//processing will be performed in this thread
 		int msgCount = receiveQueue.size();
 		notifyReceiveEvent(msgCount);
 	}
-	
+
 	string TalkyBase::toString() {
 		stringstream out;
-		
+
 		out  << "Talky node is ";
 		switch (nodeType) {
 			case 0:
 				out << "uninitialised." << endl;
 				break;
-				
+
 			case 1:
-				out << "a client, connecting to " << _remoteHost << " on port " << _remotePort << "." << endl;			
+				out << "a client, connecting to " << _remoteHost << " on port " << _remotePort << "." << endl;
 				break;
-				
+
 			case 2:
 				out << "a server on local port " << _localPort << ", with " << getNumClients() << " clients" << endl;
 		}
-		
+
 		return out.str();
 	}
 }
