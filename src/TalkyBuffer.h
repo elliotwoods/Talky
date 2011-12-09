@@ -12,6 +12,8 @@
 #include <iostream>
 #include <fstream>
 
+#include "TalkyException.h"
+
 using namespace std;
 
 namespace Talky {

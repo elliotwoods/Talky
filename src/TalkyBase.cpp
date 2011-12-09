@@ -154,7 +154,13 @@ namespace Talky {
 	void TalkyBase::clearMessages()
 	{
 		while (!lockThread())
+		{
+#ifdef _WIN32
+			Sleep(1);
+#else
 			sleep(10);
+#endif
+		}
 		
 		receiveQueue.clear();
 		
@@ -298,7 +304,10 @@ namespace Talky {
 	bool TalkyBase::rxServer(int iClient) {
 		const int nBytesReceived = rxServer(iClient, _bufferIn.getWritePointer(), _bufferIn.getRemainingWriteSpace());
 		
-		_bufferIn.advanceWritePointer(nBytesReceived);
+		try
+		{
+			_bufferIn.advanceWritePointer(nBytesReceived);
+		} catch 
 	}
 	
 	bool TalkyBase::rxClient() {

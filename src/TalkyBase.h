@@ -7,7 +7,6 @@
 //  Copyright 2011 Kimchi and Chips. All rights reserved.
 //
 
-
 #define TALKY_SLEEP_TIME_MILLIS 10
 #define TALKY_RECONNECT_TIME 200
 #define TALKY_DEFAULT_PORT 5001
@@ -16,11 +15,17 @@
 #define TALKY_BUFFER_OUT_SIZE 100000
 
 #include "TalkyMessage.h"
+#include "TalkyException.h"
 
 #include <vector>
 #include <ctime>
 #include <iostream>
 #include <sstream>
+#include <algorithm>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 using namespace std;
 
